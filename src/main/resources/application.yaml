@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: spring-Ai
+
+  #配置生产环境
+  profiles:
+    active: dev
+
+  # 流式接口的连接保持时间。容器默认约 30s，长回答会被掐断，这里放宽到 2 分钟
+  mvc:
+    async:
+      request-timeout: 120s
+
+# ========== 自定义配置 ==========
+app:
+  ai:
+    # 系统提示词：改这里即可，不用改代码重新编译
+    system-prompt: 你是一个简洁的 Java 助教

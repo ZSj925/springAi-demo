@@ -1,0 +1,29 @@
+# ============================================================
+# 开发环境配置模板（可提交到 GitHub）
+# ============================================================
+# 用法：复制本文件为同目录下的 application-dev.yaml，再填入你自己的真实值。
+#   Windows:  copy application-dev.example.yaml application-dev.yaml
+#   macOS/Linux:  cp application-dev.example.yaml application-dev.yaml
+#
+# 注意：application-dev.yaml 已被 .gitignore 忽略，不会提交；
+#       本文件里的值都是示例，不会泄露任何真实密钥。
+# ============================================================
+
+# ========== AI 配置 ==========
+# 完整路径是 spring.ai.openai.*
+spring:
+  ai:
+    openai:
+      # 填你自己的 DeepSeek API Key（形如 sk-xxxxxxxx）
+      api-key: 在此填写你的-DeepSeek-API-Key
+      base-url: https://api.deepseek.com     # DeepSeek 的 OpenAI 兼容接口
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.7
+
+  # ========== 数据库配置 ==========
+  datasource:
+    url: jdbc:mysql://localhost:3306/web01?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 在此填写你的-MySQL-密码

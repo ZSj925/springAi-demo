@@ -1,0 +1,40 @@
+# ---------- Maven 构建产物 ----------
+target/
+*.class
+*.jar
+*.war
+
+# ---------- IntelliJ IDEA ----------
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ---------- Eclipse / STS ----------
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated
+
+# ---------- VS Code ----------
+.vscode/
+
+# ---------- 日志 ----------
+*.log
+logs/
+
+# ---------- 本地配置与密钥（重要）----------
+# 真实开发配置（含 API Key / 数据库密码）只留本地，模板见 application-dev.example.yaml
+application-dev.yaml
+.env
+application-local.yaml
+application-local.properties
+application-secret.yaml
+*-secret.yaml
+
+# ---------- 系统文件 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
