@@ -32,6 +32,12 @@
     </properties>
     <dependencies>
 
+        <!--Spring AI 2.0 提供 JDBC 记忆仓库-->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
+        </dependency>
+
         <!--参数校验依赖-->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,8 +1,11 @@
 package Zsj.springai.controller;
 
+import Zsj.springai.dto.ChatAnswer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
@@ -17,9 +20,9 @@ import reactor.core.publisher.Flux;
 import Zsj.springai.common.Result;
 import Zsj.springai.dto.ChatDetail;
 import Zsj.springai.dto.Movie;
-import Zsj.springai.exception.BizException;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 用户相关接口
@@ -30,11 +33,15 @@ import java.util.List;
 @Validated //参数校验
 public class userController {
 
-    /** 注入 AiConfig 里配置好的那个 ChatClient（容器里唯一的 ChatClient bean） */
+    /**
+     * 注入 AiConfig 里配置好的那个 ChatClient（容器里唯一的 ChatClient bean）
+     */
     private final ChatClient chatClient;
+    private final MessageChatMemoryAdvisor chatMemoryAdvisor;
 
-    public userController(ChatClient chatClient) {
+    public userController(ChatClient chatClient, MessageChatMemoryAdvisor chatMemoryAdvisor) {
         this.chatClient = chatClient;
+        this.chatMemoryAdvisor = chatMemoryAdvisor;
     }
 
     /**
@@ -44,11 +51,26 @@ public class userController {
      * @return 模型回答
      */
     @GetMapping("/chat")
-    public Result<String> chat(@RequestParam
+    public Result<ChatAnswer> chat(@RequestParam
                                @NotBlank(message = "问题不能为空")
-                               @Size(max = 2000, message = "问题不能超过 2000 字") String q) {
-        String answer = chatClient.prompt().user(q).call().content();
-        return Result.ok(answer);
+                               @Size(max = 2000, message = "问题不能超过 2000 字") String q,
+                                   @RequestParam(required = false)
+                               @Size(max = 64, message = "conversationId 过长") String conversationId) {
+
+        // 第一次调用没 id → 后端生成；之后前端带回来
+        String cid = (conversationId == null || conversationId.isBlank())
+                ? UUID.randomUUID().toString()//如果为空，创建一个id并返回
+                : conversationId;
+
+        String answer = chatClient.prompt()
+                .user(q)
+                .advisors(chatMemoryAdvisor)
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, cid))
+                .call()
+                .content();
+
+        return Result.ok(new ChatAnswer(cid, answer));
+
     }
 
     /**
@@ -149,8 +171,9 @@ public class userController {
      *   <li>照常发请求（同步、阻塞）；</li>
      *   <li>把模型返回的文本当 JSON 解析成 Movie 对象。</li>
      * </ol>
-     * 注意：解析成功不等于业务上拿到了有效数据——模型可能拒答并把字段填成"无法确定"，
-     * 所以下面要再做一次业务校验，无效结果按 422 返回，不能让调用方以为是成功。
+     * 注意：解析成功不等于业务上拿到了有效数据——模型可能拒答并把字段填成"无法确定"。
+     * 这类校验已统一交给 GlobalExceptionHandler 的 ResponseBodyAdvice 处理，
+     * 这里只保留业务本身。
      *
      * @param q 想推荐什么，例如"推荐一部科幻电影"
      * @return 填好的 Movie 对象
@@ -163,26 +186,17 @@ public class userController {
                 .user(q)
                 .call()
                 .entity(Movie.class);
-
-        // 业务校验：真实电影一定有片名，且年份是个合理正数；
-        // 模型拒答时常见形态是 title="无法确定" 且 year=0
-        boolean invalid = movie == null
-                || movie.title() == null || movie.title().isBlank()
-                || movie.year() == null || movie.year() <= 0;
-        if (invalid) {
-            throw new BizException(422, "模型未能按预期结构返回，请换个问法再试");
-        }
         return Result.ok(movie);
     }
 
 
-
     /**
      * 模板变量
+     *
      * @return
      */
     @GetMapping("/chat/prompt")
-    public Result<String> chatPrompt(){
+    public Result<String> chatPrompt() {
         String answer = chatClient.prompt()
                 .user(u -> u.text("用 {lang} 写一个 {algo} 的示例，带注释")
                         .param("lang", "java")
@@ -205,7 +219,7 @@ public class userController {
      * {@code LinkedHashMap}，调用 {@code movie.title()} 时直接 ClassCastException。
      *
      * @param q 想推荐什么，例如"推荐三部科幻电影"
-     * @return 电影列表（已过滤掉模型没填好的元素）
+     * @return 电影列表（无效元素由 GlobalExceptionHandler 统一过滤 / 报错）
      */
     @GetMapping("/chat/movies")
     public Result<List<Movie>> chatMovies(@RequestParam
@@ -214,20 +228,9 @@ public class userController {
         List<Movie> movies = chatClient.prompt()
                 .user(q)
                 .call()
-                .entity(new ParameterizedTypeReference<List<Movie>>() {});
-
-        // 模型可能给空数组、给不够数量、或塞几条"无法确定"的占位，
-        // 所以逐个过滤，只要片名和年份都合理的才留下
-        List<Movie> valid = movies == null ? List.of() : movies.stream()
-                .filter(m -> m != null)
-                .filter(m -> m.title() != null && !m.title().isBlank())
-                .filter(m -> m.year() != null && m.year() > 0)
-                .toList();
-
-        if (valid.isEmpty()) {
-            throw new BizException(422, "模型未能按预期结构返回，请换个问法再试");
-        }
-        return Result.ok(valid);
+                .entity(new ParameterizedTypeReference<List<Movie>>() {
+                });
+        return Result.ok(movies);
     }
 
 }

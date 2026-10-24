@@ -1,6 +1,9 @@
 package Zsj.springai.config;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +25,17 @@ public class AiConfig {
     public ChatClient chatClient(ChatClient.Builder builder,
                                  @Value("${app.ai.system-prompt:你是一个简洁的 Java 助教}") String systemPrompt) {
         return builder
-                .defaultSystem(systemPrompt)
+                .defaultSystem(systemPrompt)//系统提示词
                 .build();
+    }
+
+    /**
+     * 上下文配置
+     * @param chatMemory
+     * @return
+     */
+    @Bean
+    public MessageChatMemoryAdvisor chatMemoryAdvisor(ChatMemory chatMemory) {
+        return MessageChatMemoryAdvisor.builder(chatMemory).build();
     }
 }
