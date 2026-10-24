@@ -55,7 +55,7 @@ public class userController {
                                @NotBlank(message = "问题不能为空")
                                @Size(max = 2000, message = "问题不能超过 2000 字") String q,
                                    @RequestParam(required = false)
-                               @Size(max = 64, message = "conversationId 过长") String conversationId) {
+                               @Size(max = 36, message = "Id大小不能超过36字符") String conversationId) {
 
         // 第一次调用没 id → 后端生成；之后前端带回来
         String cid = (conversationId == null || conversationId.isBlank())
