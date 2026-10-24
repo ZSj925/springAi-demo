@@ -6,6 +6,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,8 @@ import Zsj.springai.common.Result;
 import Zsj.springai.dto.ChatDetail;
 import Zsj.springai.dto.Movie;
 import Zsj.springai.exception.BizException;
+
+import java.util.List;
 
 /**
  * 用户相关接口
@@ -170,6 +173,61 @@ public class userController {
             throw new BizException(422, "模型未能按预期结构返回，请换个问法再试");
         }
         return Result.ok(movie);
+    }
+
+
+
+    /**
+     * 模板变量
+     * @return
+     */
+    @GetMapping("/chat/prompt")
+    public Result<String> chatPrompt(){
+        String answer = chatClient.prompt()
+                .user(u -> u.text("用 {lang} 写一个 {algo} 的示例，带注释")
+                        .param("lang", "java")
+                        .param("algo", "冒泡排序"))
+                .call()
+                .content();
+
+        return Result.ok(answer);
+    }
+
+    /**
+     * 对话输出（结构化输出：一次返回多个对象）
+     * <p>
+     * 与 {@code /chat/entity} 的唯一区别是这里要的是 {@code List<Movie>}，
+     * 而 Java 有类型擦除，{@code List<Movie>.class} 根本不存在，所以必须用
+     * {@code new ParameterizedTypeReference<List<Movie>>() {}} 这个匿名子类
+     * 把完整泛型信息"刻"进类的继承关系里，框架才能反射取到。
+     * <p>
+     * 如果写成 {@code entity(List.class)} 编译也能过，但每个元素会变成
+     * {@code LinkedHashMap}，调用 {@code movie.title()} 时直接 ClassCastException。
+     *
+     * @param q 想推荐什么，例如"推荐三部科幻电影"
+     * @return 电影列表（已过滤掉模型没填好的元素）
+     */
+    @GetMapping("/chat/movies")
+    public Result<List<Movie>> chatMovies(@RequestParam
+                                          @NotBlank(message = "问题不能为空")
+                                          @Size(max = 2000, message = "问题不能超过 2000 字") String q) {
+        List<Movie> movies = chatClient.prompt()
+                .user(q)
+                .call()
+                .entity(new ParameterizedTypeReference<List<Movie>>() {});
+
+        // 模型可能给空数组、给不够数量、或塞几条"无法确定"的占位，
+        // 所以逐个过滤，只要片名和年份都合理的才留下
+        List<Movie> valid = movies == null ? List.of() : movies.stream()
+                .filter(m -> m != null)
+                .filter(m -> m.title() != null && !m.title().isBlank())
+                .filter(m -> m.year() != null && m.year() > 0)
+                .toList();
+
+        if (valid.isEmpty()) {
+            throw new BizException(422, "模型未能按预期结构返回，请换个问法再试");
+        }
+        return Result.ok(valid);
     }
 
 }
