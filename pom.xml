@@ -32,6 +32,45 @@
     </properties>
     <dependencies>
 
+<!--        mcp-->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-client</artifactId>
+        </dependency>
+
+        <!-- ===== RAG 必需 ===== -->
+        <!-- ① 向量库：内存版 SimpleVectorStore（零中间件，适合先跑通） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-vector-store</artifactId>
+        </dependency>
+
+        <!-- ② 检索结果自动注入 prompt -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-vector-store-advisor</artifactId>
+        </dependency>
+
+        <!-- ③ 文档解析：docx / pptx / pdf / html 都能读 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
+
+        <!-- ===== embedding（二选一）===== -->
+        <!-- A. 本地 Ollama（免费、离线、中文 bge-m3 够用） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-ollama</artifactId>
+        </dependency>
+        <!-- B. 云端百炼：不用加依赖，直接复用你现有的 spring-ai-starter-model-openai（见 yaml） -->
+
+        <!-- ===== 想换真向量库时（三选一，替换 ①）===== -->
+        <!-- <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-vector-store-pgvector</artifactId></dependency>
+             <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
+             <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-vector-store-redis</artifactId></dependency>
+             <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-vector-store-qdrant</artifactId></dependency> -->
+
         <!--Spring AI 2.0 提供 JDBC 记忆仓库-->
         <dependency>
             <groupId>org.springframework.ai</groupId>

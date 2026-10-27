@@ -182,14 +182,22 @@ public class GlobalExceptionHandler implements ResponseBodyAdvice<Object> {
         }
 
         // 列表：List<Movie>
-        if (data instanceof List<?> list && list.stream().allMatch(Movie.class::isInstance)) {
-            List<Movie> valid = ((List<Movie>) list).stream()
-                    .filter(this::isValidMovie)
-                    .toList();
-            if (valid.isEmpty()) {
-                throw new BizException(422, "模型未能按预期结构返回，请换个问法再试");
+        // 注意 list.isEmpty() 要单独判：allMatch 在空列表上返回 true（vacuous truth），
+        // 会把"本来就没数据"的 List<Map> 之类误当成 List<Movie>，直接抛 422。
+        // 所以空列表时改为看方法声明的泛型到底是不是 List<Movie>。
+        if (data instanceof List<?> list) {
+            boolean looksLikeMovieList = list.isEmpty()
+                    ? isMovieReturnType(returnType)
+                    : list.stream().allMatch(Movie.class::isInstance);
+            if (looksLikeMovieList) {
+                List<Movie> valid = ((List<Movie>) list).stream()
+                        .filter(this::isValidMovie)
+                        .toList();
+                if (valid.isEmpty()) {
+                    throw new BizException(422, "模型未能按预期结构返回，请换个问法再试");
+                }
+                return Result.ok(valid);
             }
-            return Result.ok(valid);
         }
 
         // data 为 null 但方法声明要的就是 Movie / List——同样视为失败

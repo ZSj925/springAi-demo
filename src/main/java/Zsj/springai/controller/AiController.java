@@ -52,4 +52,22 @@ public class AiController {
                 .content();
         return Result.ok(english);
     }
+
+    /**
+     * RAG 问答：AiConfig 里的 chatClient 已经挂了 QuestionAnswerAdvisor，
+     * 每次调用会先去知识库检索，再把命中的片段拼进上下文交给模型。
+     *
+     * @param q 用户问题
+     * @return 基于知识库的回答
+     */
+    @GetMapping("/ask")
+    public Result<String> ask(@RequestParam
+                              @NotBlank(message = "问题不能为空")
+                              @Size(max = 2000, message = "问题不能超过 2000 字") String q) {
+        String answer = chatClient.prompt()
+                .user(q)
+                .call()
+                .content();
+        return Result.ok(answer);
+    }
 }
